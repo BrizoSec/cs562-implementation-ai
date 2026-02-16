@@ -1,3 +1,4 @@
+import math
 import random
 from collections import deque
 from typing import List, Optional, Tuple
@@ -135,7 +136,7 @@ class FamilyTreeGenerator:
         if person.partner is None:
             children -= 1
 
-        return max(0, round(children))
+        return max(0, math.ceil(children))
 
     def _distribute_birth_years(self, parent1: Person, parent2: Person, num_children: int) -> List[int]:
         """Distribute birth years for children between two parents."""

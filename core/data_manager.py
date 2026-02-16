@@ -18,7 +18,7 @@ class DataManager:
         if self._initialized:
             return
         self._initialized = True
-        self.base_path = Path(__file__).parent.parent
+        self.base_path = Path(__file__).parent.parent / 'data'
 
         # Data structures
         self.life_expectancy: Dict[int, float] = {}
