@@ -16,6 +16,7 @@ class FamilyTreeGenerator:
         self.data_manager = DataManager()
         self.rng = random.Random(seed)
         self.tree = FamilyTree()
+        self.family_ids: set = set()  # IDs of people born into the tree (not married-in)
 
     def generate(self) -> FamilyTree:
         """Generate the complete family tree."""
@@ -25,6 +26,8 @@ class FamilyTreeGenerator:
 
         self.tree.add_founder(founder1)
         self.tree.add_founder(founder2)
+        self.family_ids.add(founder1.id)
+        self.family_ids.add(founder2.id)
 
         # Determine if founders partner with each other
         decade = "1950s"
@@ -34,32 +37,26 @@ class FamilyTreeGenerator:
             founder1.partner = founder2
             founder2.partner = founder1
 
-        # Initialize queue with founders
+        # Initialize queue with both founders — each generates independently
         queue = deque([founder1, founder2])
+        processed = set()
 
         # BFS generation
         while queue:
             person = queue.popleft()
 
-            # Skip if person already has children
-            if person.children:
+            # Skip if this person has already generated their children
+            if person.id in processed:
                 continue
-
-            # Skip if person has no partner (single parent case handled in child calculation)
-            # Actually, we allow single parents per graduate requirements
-            # if person.partner is None:
-            #     continue
+            processed.add(person.id)
 
             # Generate children for this person
             children = self._generate_children(person)
 
             for child in children:
                 self.tree.add_person(child)
-
-                # Add child to parent's children list
                 person.children.append(child)
-                if person.partner:
-                    person.partner.children.append(child)
+                self.family_ids.add(child.id)
 
                 # Determine if child finds a partner
                 child_decade = child.get_birth_decade()
@@ -70,6 +67,8 @@ class FamilyTreeGenerator:
                     child.partner = partner
                     partner.partner = child
                     self.tree.add_person(partner)
+                    # Partner also gets to generate their own children
+                    queue.append(partner)
 
                 # Add child to queue for next generation
                 queue.append(child)
@@ -98,9 +97,13 @@ class FamilyTreeGenerator:
             if year > 2120:
                 break
 
-            # Create child with both parents if partnered, otherwise single parent
+            # Create child with both parents if partnered, otherwise single parent.
+            # Always pass the family-tree parent as parent1 so last names are inherited correctly.
             if person.partner:
-                child = self.factory.create_child(person, person.partner, year)
+                if person.id in self.family_ids:
+                    child = self.factory.create_child(person, person.partner, year)
+                else:
+                    child = self.factory.create_child(person.partner, person, year)
             else:
                 # Single parent - create a placeholder partner with compatible birth year
                 # Partner must be age 25-45 when child is born
